@@ -1,7 +1,7 @@
 import type { FeatureCollection, Point } from 'geojson'
 import type { MapRef } from 'react-map-gl/maplibre'
 
-import type { BoundingBox, Entity, EntityStatus, EntityType } from './model'
+import type { BoundingBox, Entity, EntityStatus, EntityType, GeoPoint } from './model'
 
 export interface EntityFeatureProperties {
   id: string
@@ -47,6 +47,19 @@ export function boundsToBBox(bounds: Bounds): BoundingBox {
     round(clamp(bounds.getEast(), 180)),
     round(clamp(bounds.getNorth(), 90)),
   ]
+}
+
+interface LngLatLike {
+  lat: number
+  wrap(): { lng: number }
+}
+
+/**
+ * Converts a MapLibre LngLat. Longitude is wrapped into [-180, 180] because
+ * after panning across the antimeridian the map reports values like 200.
+ */
+export function toGeoPoint(lngLat: LngLatLike): GeoPoint {
+  return { latitude: lngLat.lat, longitude: lngLat.wrap().lng }
 }
 
 const FOCUS_ZOOM = 13

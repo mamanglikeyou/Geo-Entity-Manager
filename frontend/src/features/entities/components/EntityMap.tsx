@@ -5,6 +5,7 @@ import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import { useMemo, useState, type Ref } from 'react'
 import Map, {
   Layer,
+  Marker,
   NavigationControl,
   Source,
   type LayerProps,
@@ -13,13 +14,14 @@ import Map, {
   type MapRef,
 } from 'react-map-gl/maplibre'
 
-import { boundsToBBox, toFeatureCollection } from '../map'
+import { boundsToBBox, toFeatureCollection, toGeoPoint } from '../map'
 import {
   ENTITY_STATUSES,
   ENTITY_STATUS_COLORS as COLORS,
   ENTITY_STATUS_LABELS,
   type BoundingBox,
   type Entity,
+  type GeoPoint,
 } from '../model'
 
 // MapLibre derives its worker URL at runtime from a template string that
@@ -94,6 +96,11 @@ interface EntityMapProps {
   selectedId: string | null
   onSelect: (id: string | null) => void
   onViewportChange: (bbox: BoundingBox) => void
+  /** While a form is open, clicks pick a location instead of selecting. */
+  picking: boolean
+  /** Where the entity being created or edited will be placed. */
+  draftLocation: GeoPoint | null
+  onPickLocation: (location: GeoPoint) => void
 }
 
 /**
@@ -106,6 +113,9 @@ export function EntityMap({
   selectedId,
   onSelect,
   onViewportChange,
+  picking,
+  draftLocation,
+  onPickLocation,
 }: EntityMapProps) {
   const [cursor, setCursor] = useState<string>()
   const data = useMemo(() => toFeatureCollection(entities), [entities])
@@ -115,6 +125,11 @@ export function EntityMap({
   }
 
   const handleClick = (event: MapMouseEvent) => {
+    if (picking) {
+      onPickLocation(toGeoPoint(event.lngLat))
+      return
+    }
+
     // Query at the click point instead of using event.features: react-map-gl
     // fills that from the last mousemove, which is stale or missing when a
     // click or tap arrives without one (touch screens, keyboard, automation).
@@ -149,7 +164,7 @@ export function EntityMap({
       mapStyle={MAP_STYLE_URL}
       attributionControl={{ compact: true }}
       interactiveLayerIds={INTERACTIVE_LAYER_IDS}
-      cursor={cursor}
+      cursor={picking ? 'crosshair' : cursor}
       onMouseEnter={() => {
         setCursor('pointer')
       }}
@@ -186,6 +201,18 @@ export function EntityMap({
         />
         <Layer {...pointLayer} />
       </Source>
+
+      {draftLocation && (
+        <Marker
+          longitude={draftLocation.longitude}
+          latitude={draftLocation.latitude}
+          color="#2563eb"
+          draggable
+          onDragEnd={(e) => {
+            onPickLocation(toGeoPoint(e.lngLat))
+          }}
+        />
+      )}
 
       <MapLegend />
     </Map>

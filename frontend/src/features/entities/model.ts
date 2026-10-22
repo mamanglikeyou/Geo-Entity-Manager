@@ -7,6 +7,18 @@ export const ENTITY_STATUSES = ['active', 'inactive', 'maintenance', 'offline'] 
 export type EntityType = (typeof ENTITY_TYPES)[number]
 export type EntityStatus = (typeof ENTITY_STATUSES)[number]
 
+// Mirrors internal/entity/validation.go, so the form can reject bad input
+// before a round trip. The backend remains the source of truth.
+export const LIMITS = {
+  nameLength: 100,
+  descriptionLength: 500,
+  attributes: 20,
+  attributeKeyLength: 50,
+  attributeValueLength: 200,
+} as const
+
+export const ATTRIBUTE_KEY_PATTERN = /^[A-Za-z0-9_-]+$/
+
 export const ENTITY_TYPE_LABELS: Record<EntityType, string> = {
   vehicle: 'Vehicle',
   iot_device: 'IoT device',
@@ -58,6 +70,11 @@ export interface EntityInput {
   status: EntityStatus
   description: string
   attributes: Record<string, string>
+  latitude: number
+  longitude: number
+}
+
+export interface GeoPoint {
   latitude: number
   longitude: number
 }

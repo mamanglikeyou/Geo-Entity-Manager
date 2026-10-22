@@ -1,13 +1,15 @@
 import { lazy, Suspense, useRef, useState } from 'react'
 import type { MapRef } from 'react-map-gl/maplibre'
 
+import { Button } from '@/components/ui/Button'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 
 import { EMPTY_FILTERS } from '../filters'
 import { focusEntity } from '../map'
-import type { BoundingBox, Entity, EntityFilter } from '../model'
+import type { BoundingBox, Entity, EntityFilter, GeoPoint } from '../model'
 import { useEntities } from '../queries'
 import { EntityDetail } from './EntityDetail'
+import { CreateEntityForm, EditEntityForm } from './EntityEditor'
 import { EntityFilters } from './EntityFilters'
 import { EntityList } from './EntityList'
 
@@ -18,16 +20,27 @@ const EntityMap = lazy(() => import('./EntityMap').then((m) => ({ default: m.Ent
 const LIST_LIMIT = 500
 const SEARCH_DEBOUNCE_MS = 300
 
+/** What the side panel shows. Only one thing at a time, so one state value. */
+type Panel =
+  | { view: 'list' }
+  | { view: 'detail'; id: string }
+  | { view: 'create'; initialLocation: GeoPoint | null }
+  | { view: 'edit'; id: string }
+
 /**
- * The main screen: a map plus a side panel that shows either the filtered
- * list of entities in view or the details of the selected one. Map and list
- * share one query, so they always show the same entities.
+ * The main screen: a map plus a side panel that shows the filtered list of
+ * entities in view, the details of one, or the form to create or edit one.
+ * Map and list share one query, so they always show the same entities.
  */
 export function EntityExplorer() {
   const mapRef = useRef<MapRef>(null)
+  const [panel, setPanel] = useState<Panel>({ view: 'list' })
   const [filters, setFilters] = useState(EMPTY_FILTERS)
   const [bbox, setBBox] = useState<BoundingBox | null>(null)
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  // Picked: where the user last clicked or dragged on the map (map -> form).
+  // Draft: where the form's coordinates currently point (form -> map pin).
+  const [pickedLocation, setPickedLocation] = useState<GeoPoint | null>(null)
+  const [draftLocation, setDraftLocation] = useState<GeoPoint | null>(null)
   const search = useDebouncedValue(filters.search, SEARCH_DEBOUNCE_MS)
 
   const filter: EntityFilter = {
@@ -41,28 +54,87 @@ export function EntityExplorer() {
   // would load entities from the whole world only to discard them.
   const entitiesQuery = useEntities(filter, { enabled: bbox !== null })
 
-  const selectFromList = (entity: Entity) => {
-    setSelectedId(entity.id)
+  const editing = panel.view === 'create' || panel.view === 'edit'
+  const selectedId = panel.view === 'detail' || panel.view === 'edit' ? panel.id : null
+
+  const show = (next: Panel) => {
+    if (next.view !== 'create' && next.view !== 'edit') {
+      setPickedLocation(null)
+      setDraftLocation(null)
+    }
+    setPanel(next)
+  }
+
+  const showSaved = (entity: Entity) => {
+    show({ view: 'detail', id: entity.id })
     focusEntity(mapRef.current, entity)
+  }
+
+  const startCreate = () => {
+    // Start at the map centre so the new pin is visible right away.
+    const center = mapRef.current?.getCenter()
+    show({
+      view: 'create',
+      initialLocation: center ? { latitude: center.lat, longitude: center.lng } : null,
+    })
+  }
+
+  const formProps = {
+    pickedLocation,
+    onLocationChange: setDraftLocation,
+    onSaved: showSaved,
   }
 
   return (
     <div className="flex min-h-0 flex-1 flex-col-reverse md:flex-row">
       <aside className="flex min-h-0 flex-1 flex-col border-t border-slate-200 bg-white md:w-96 md:flex-none md:border-t-0 md:border-r">
-        {selectedId ? (
+        {panel.view === 'create' ? (
+          <CreateEntityForm
+            {...formProps}
+            initialLocation={panel.initialLocation}
+            onCancel={() => {
+              show({ view: 'list' })
+            }}
+          />
+        ) : panel.view === 'edit' ? (
+          <EditEntityForm
+            {...formProps}
+            entityId={panel.id}
+            onCancel={() => {
+              show({ view: 'detail', id: panel.id })
+            }}
+          />
+        ) : panel.view === 'detail' ? (
           <EntityDetail
-            entityId={selectedId}
+            entityId={panel.id}
             onClose={() => {
-              setSelectedId(null)
+              show({ view: 'list' })
+            }}
+            onEdit={() => {
+              show({ view: 'edit', id: panel.id })
+            }}
+            onDeleted={() => {
+              show({ view: 'list' })
             }}
           />
         ) : (
           <>
-            <div className="border-b border-slate-200 p-3">
+            <div className="space-y-3 border-b border-slate-200 p-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-semibold">Entities</h2>
+                <Button onClick={startCreate}>New entity</Button>
+              </div>
               <EntityFilters value={filters} onChange={setFilters} />
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto">
-              <EntityList query={entitiesQuery} limit={LIST_LIMIT} onSelect={selectFromList} />
+              <EntityList
+                query={entitiesQuery}
+                limit={LIST_LIMIT}
+                onSelect={(entity) => {
+                  show({ view: 'detail', id: entity.id })
+                  focusEntity(mapRef.current, entity)
+                }}
+              />
             </div>
           </>
         )}
@@ -80,8 +152,13 @@ export function EntityExplorer() {
             ref={mapRef}
             entities={entitiesQuery.data ?? []}
             selectedId={selectedId}
-            onSelect={setSelectedId}
+            onSelect={(id) => {
+              show(id ? { view: 'detail', id } : { view: 'list' })
+            }}
             onViewportChange={setBBox}
+            picking={editing}
+            draftLocation={draftLocation}
+            onPickLocation={setPickedLocation}
           />
         </Suspense>
       </div>

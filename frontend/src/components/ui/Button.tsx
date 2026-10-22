@@ -1,15 +1,18 @@
-import type { ButtonHTMLAttributes } from 'react'
+import type { ButtonHTMLAttributes, Ref } from 'react'
 
-type Variant = 'primary' | 'secondary' | 'danger'
+type Variant = 'primary' | 'secondary' | 'danger' | 'dangerOutline'
 
 const variantClasses: Record<Variant, string> = {
   primary: 'bg-blue-600 text-white hover:bg-blue-700 focus-visible:outline-blue-600',
   secondary:
     'bg-white text-slate-700 ring-1 ring-slate-300 ring-inset hover:bg-slate-50 focus-visible:outline-slate-400',
   danger: 'bg-red-600 text-white hover:bg-red-700 focus-visible:outline-red-600',
+  dangerOutline:
+    'bg-white text-red-700 ring-1 ring-red-200 ring-inset hover:bg-red-50 focus-visible:outline-red-600',
 }
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  ref?: Ref<HTMLButtonElement>
   variant?: Variant
 }
 

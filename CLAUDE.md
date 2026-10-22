@@ -89,6 +89,8 @@ src/features/<feature>/  model.ts   types, zod schemas, enum labels and colors
                          queries.ts TanStack Query keys and hooks
                          map.ts     pure map helpers (GeoJSON, bbox, camera)
                          filters.ts filter form state
+                         form.ts    entity form schema (zod), conversions,
+                                    server-error mapping
                          components/
 src/hooks                generic React hooks
 src/lib                  cross-cutting code (HTTP client, formatting)
@@ -96,8 +98,8 @@ src/test                 test setup and helpers (mockFetch, routeFetch, ...)
 ```
 
 `EntityExplorer` is the main screen. It owns the filter, viewport (bbox) and
-selection state, runs the single list query, and passes the results to both
-`EntityMap` and `EntityList`.
+panel state (`list | detail | create | edit`), runs the single list query, and
+passes the results to both `EntityMap` and `EntityList`.
 
 Rules:
 
@@ -114,6 +116,20 @@ Rules:
   class names or test ids.
 - Component files export only components (Fast Refresh); constants and helpers
   go in a sibling `.ts` file.
+
+Forms (react-hook-form + zod):
+
+- `entityFormSchema` in `form.ts` mirrors the backend rules (`LIMITS` and
+  `ATTRIBUTE_KEY_PATTERN` in `model.ts`). Change them together with
+  `internal/entity/validation.go`. Lengths count code points, like Go runes.
+- Form values are text (`z.input`); the schema parses them into `EntityInput`
+  (`z.output`). Attributes are edited as rows and turned into a map on submit.
+- Server validation errors go through `toServerFormErrors` onto the matching
+  fields; anything unmatched becomes a form-level alert. Never only toast them.
+- Use `Field` for labelled controls: it wires `aria-invalid` and
+  `aria-describedby` to the hint or error.
+- Location sync: map click/drag -> `pickedLocation` -> form fields; form fields
+  -> `onLocationChange` -> draft pin. Keep that one-way flow in each direction.
 
 Map (MapLibre via `react-map-gl/maplibre`):
 

@@ -1,20 +1,31 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 
+import { Button } from '@/components/ui/Button'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { CloseIcon, IconButton } from '@/components/ui/IconButton'
 import { formatCoordinates, formatDateTime } from '@/lib/format'
 import { ApiError } from '@/lib/http'
 
 import { ENTITY_TYPE_LABELS } from '../model'
-import { useEntity } from '../queries'
+import { useDeleteEntity, useEntity } from '../queries'
 import { StatusBadge } from './StatusBadge'
 
 interface EntityDetailProps {
   entityId: string
   onClose: () => void
+  onEdit: () => void
+  onDeleted: () => void
 }
 
-export function EntityDetail({ entityId, onClose }: EntityDetailProps) {
+export function EntityDetail({ entityId, onClose, onEdit, onDeleted }: EntityDetailProps) {
   const { data: entity, isPending, isError, error } = useEntity(entityId)
+  const deleteEntity = useDeleteEntity()
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
+
+  const closeDeleteDialog = () => {
+    setConfirmingDelete(false)
+    deleteEntity.reset()
+  }
 
   return (
     <section aria-labelledby="entity-detail-title" className="flex min-h-0 flex-1 flex-col">
@@ -66,6 +77,37 @@ export function EntityDetail({ entityId, onClose }: EntityDetailProps) {
           </div>
         )}
       </div>
+
+      {entity && !isError && (
+        <footer className="flex justify-end gap-2 border-t border-slate-200 p-4">
+          <Button
+            variant="dangerOutline"
+            onClick={() => {
+              setConfirmingDelete(true)
+            }}
+          >
+            Delete
+          </Button>
+          <Button onClick={onEdit}>Edit</Button>
+        </footer>
+      )}
+
+      {confirmingDelete && entity && (
+        <ConfirmDialog
+          title="Delete entity?"
+          confirmLabel="Delete"
+          pendingLabel="Deleting…"
+          isPending={deleteEntity.isPending}
+          error={deleteEntity.error?.message}
+          onCancel={closeDeleteDialog}
+          onConfirm={() => {
+            deleteEntity.mutate(entity.id, { onSuccess: onDeleted })
+          }}
+        >
+          <strong className="font-medium text-slate-900">{entity.name}</strong> will be removed
+          permanently. This cannot be undone.
+        </ConfirmDialog>
+      )}
     </section>
   )
 }

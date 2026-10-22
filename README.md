@@ -5,9 +5,20 @@ such as vehicles, IoT devices or facilities. Each entity has an identity, basic
 attributes, a status and a coordinate, and can be created, viewed, updated and
 deleted directly on a map.
 
-> **Status:** work in progress. The REST API and the map view (clustered
-> markers, viewport-based loading, filters, detail panel) are complete; the
-> create / edit / delete forms are being added next.
+> **Status:** feature complete. Remaining work is packaging (one-command
+> Docker setup), documentation and CI.
+
+## Features
+
+- Entities shown on an interactive map as clustered, status-coloured markers;
+  only those inside the visible area are loaded.
+- Search by name and filter by type and status; the list and the map always
+  show the same results.
+- Details panel with coordinates, timestamps and free-form attributes.
+- Create and edit entities with a form; set the location by clicking the map
+  or dragging the pin. Delete with confirmation.
+- Validation on both sides: the form checks the same rules as the API before
+  sending, and any error the API still returns is shown on the matching field.
 
 ## Tech stack
 
