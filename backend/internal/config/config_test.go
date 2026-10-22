@@ -35,6 +35,9 @@ func TestLoadDefaults(t *testing.T) {
 	if want := []string{"http://localhost:5173"}; !slices.Equal(cfg.AllowedOrigins, want) {
 		t.Errorf("AllowedOrigins = %v, want %v", cfg.AllowedOrigins, want)
 	}
+	if cfg.SeedSampleData {
+		t.Error("SeedSampleData = true, want false by default")
+	}
 }
 
 func TestLoadOverrides(t *testing.T) {
@@ -44,6 +47,7 @@ func TestLoadOverrides(t *testing.T) {
 		"LOG_LEVEL":            "debug",
 		"CORS_ALLOWED_ORIGINS": " http://a.test, http://b.test ,",
 		"SHUTDOWN_TIMEOUT":     "3s",
+		"SEED_SAMPLE_DATA":     "true",
 	}))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -64,6 +68,9 @@ func TestLoadOverrides(t *testing.T) {
 	if want := []string{"http://a.test", "http://b.test"}; !slices.Equal(cfg.AllowedOrigins, want) {
 		t.Errorf("AllowedOrigins = %v, want %v", cfg.AllowedOrigins, want)
 	}
+	if !cfg.SeedSampleData {
+		t.Error("SeedSampleData = false, want true")
+	}
 }
 
 func TestLoadRejectsInvalidValues(t *testing.T) {
@@ -75,6 +82,7 @@ func TestLoadRejectsInvalidValues(t *testing.T) {
 		{name: "unparsable timeout", env: map[string]string{"SHUTDOWN_TIMEOUT": "soon"}},
 		{name: "zero timeout", env: map[string]string{"SHUTDOWN_TIMEOUT": "0s"}},
 		{name: "negative timeout", env: map[string]string{"SHUTDOWN_TIMEOUT": "-1s"}},
+		{name: "seed flag not a boolean", env: map[string]string{"SEED_SAMPLE_DATA": "yes please"}},
 	}
 
 	for _, tt := range tests {

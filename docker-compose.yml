@@ -13,10 +13,33 @@ services:
       - db-data:/var/lib/postgresql/data
       - ./deploy/postgres/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U geo -d geo"]
+      # Check over TCP: during first-time init PostgreSQL runs a temporary
+      # server on the Unix socket only, which would pass a socket check early.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U geo -d geo"]
       interval: 5s
       timeout: 3s
-      retries: 10
+      retries: 20
+
+  api:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgres://geo:geo@db:5432/geo?sslmode=disable
+      CORS_ALLOWED_ORIGINS: http://localhost:3000,http://localhost:5173
+      SEED_SAMPLE_DATA: "true"
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    build: ./frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - api
+    restart: unless-stopped
 
 volumes:
   db-data:

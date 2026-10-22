@@ -14,6 +14,7 @@ import (
 	"geo-entity-manager/backend/internal/config"
 	"geo-entity-manager/backend/internal/entity"
 	"geo-entity-manager/backend/internal/httpapi"
+	"geo-entity-manager/backend/internal/seed"
 	"geo-entity-manager/backend/internal/storage/postgres"
 )
 
@@ -51,13 +52,23 @@ func run() error {
 	}
 	logger.Info("database ready", "migrations_applied", applied)
 
+	entities := entity.NewService(postgres.NewEntityRepository(pool))
+
+	if cfg.SeedSampleData {
+		created, err := seed.SampleData(startupCtx, entities)
+		if err != nil {
+			return fmt.Errorf("seed sample data: %w", err)
+		}
+		logger.Info("sample data checked", "entities_created", created)
+	}
+
 	srv := &http.Server{
 		Addr: cfg.HTTPAddr,
 		Handler: httpapi.NewRouter(httpapi.RouterConfig{
 			Logger:         logger,
 			AllowedOrigins: cfg.AllowedOrigins,
 			DB:             pool,
-			Entities:       entity.NewService(postgres.NewEntityRepository(pool)),
+			Entities:       entities,
 		}),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,

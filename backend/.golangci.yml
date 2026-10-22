@@ -1,0 +1,28 @@
+version: "2"
+
+linters:
+  # On top of the defaults (errcheck, govet, ineffassign, staticcheck, unused).
+  enable:
+    - bodyclose
+    - errorlint
+    - gocritic
+    - gosec
+    - misspell
+    - noctx
+    - unconvert
+    - unparam
+  exclusions:
+    rules:
+      # Tests use literal fixtures (gosec) and httptest requests without a
+      # caller-supplied context (noctx); neither matters outside production.
+      - path: _test\.go
+        linters: [gosec, noctx]
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - geo-entity-manager/backend

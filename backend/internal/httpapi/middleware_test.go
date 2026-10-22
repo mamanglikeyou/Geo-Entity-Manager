@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -26,8 +27,9 @@ func TestRecovererRepanicsOnAbortHandler(t *testing.T) {
 	})
 
 	defer func() {
-		if rec := recover(); rec != http.ErrAbortHandler {
-			t.Fatalf("recovered %v, want http.ErrAbortHandler", rec)
+		err, _ := recover().(error)
+		if !errors.Is(err, http.ErrAbortHandler) {
+			t.Fatalf("recovered %v, want http.ErrAbortHandler", err)
 		}
 	}()
 	recoverer(discardLogger())(aborting).ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))

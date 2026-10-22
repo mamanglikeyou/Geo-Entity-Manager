@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
 
 // defaultDatabaseURL matches the database started by docker-compose.yml so
 // the API runs locally without extra setup. Deployments must override it.
-const defaultDatabaseURL = "postgres://geo:geo@localhost:5432/geo?sslmode=disable"
+const defaultDatabaseURL = "postgres://geo:geo@localhost:5432/geo?sslmode=disable" //nolint:gosec // local development default, not a secret
 
 type Config struct {
 	HTTPAddr        string
@@ -19,6 +20,8 @@ type Config struct {
 	LogLevel        slog.Level
 	AllowedOrigins  []string
 	ShutdownTimeout time.Duration
+	// SeedSampleData inserts demo entities on startup when the table is empty.
+	SeedSampleData bool
 }
 
 func Load() (Config, error) {
@@ -53,6 +56,13 @@ func load(lookup func(string) (string, bool)) (Config, error) {
 		return Config{}, fmt.Errorf("SHUTDOWN_TIMEOUT: must be positive, got %s", timeout)
 	}
 	cfg.ShutdownTimeout = timeout
+
+	rawSeed := get("SEED_SAMPLE_DATA", "false")
+	seed, err := strconv.ParseBool(rawSeed)
+	if err != nil {
+		return Config{}, fmt.Errorf("SEED_SAMPLE_DATA: must be true or false, got %q", rawSeed)
+	}
+	cfg.SeedSampleData = seed
 
 	return cfg, nil
 }

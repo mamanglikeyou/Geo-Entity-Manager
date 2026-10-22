@@ -14,11 +14,12 @@ and delete entities on an interactive map.
 ## Commands
 
 ```bash
-make db-up                      # start PostGIS (docker compose)
+make up                         # whole stack via docker compose, UI on :3000
+make db-up                      # only PostGIS (docker compose)
 make backend-run                # start the API on :8080, applies migrations
 make backend-test               # unit tests; DB tests skip without TEST_DATABASE_URL
 make backend-test-integration   # full suite incl. PostGIS tests, inside a Go container
-cd backend && go vet ./...
+make backend-lint               # golangci-lint (config: backend/.golangci.yml)
 ```
 
 ```bash
@@ -47,6 +48,7 @@ internal/entity    domain: model, validation, service, Repository interface
 internal/httpapi   router, middleware, handlers, JSON responses
 internal/storage/postgres
                    pgx pool, embedded goose migrations, entity.Repository impl
+internal/seed      sample entities, inserted via entity.Service when the table is empty
 ```
 
 Rules:
@@ -148,15 +150,23 @@ Map (MapLibre via `react-map-gl/maplibre`):
 
 - Go: `gofmt`, table-driven tests, `httptest` for handlers, no global mutable state.
 - Comments explain *why*, not *what*. Do not add comments that restate the code.
-- Do not add a dependency without a concrete reason; mention it in the README's
-  library section.
-- Keep changes scoped to the current phase. Do not scaffold code for later phases.
+- Do not add a dependency without a concrete reason; add it to the README's
+  "Alasan pemilihan library" section.
+- Language: `README.md` is in Indonesian (for the reviewers), keeping technical
+  terms in English. Code, comments, commit messages, `docs/API.md` and this file
+  are in English.
+- Keep changes scoped to the task at hand. Do not scaffold code for later work.
+- A change is done when CI would pass: backend golangci-lint and tests (including
+  integration), frontend `format:check`, `lint`, `typecheck`, `test` and `build`.
+  For UI changes, also check the behaviour in a browser.
 
 ## Workflow
 
-Work is split into phases. For each phase the agent proposes and implements the change,
-the developer reviews it, runs it locally, adjusts what they disagree with, and commits.
-The agent does not commit or push on its own.
+Work is split into small steps. For each step the agent proposes and implements the
+change, the developer reviews it, runs it locally, adjusts what they disagree with,
+and commits. The agent does not commit or push on its own.
+
+The initial build was done in these phases (all complete):
 
 1. Repository scaffold and backend skeleton
 2. Domain model, validation and unit tests
