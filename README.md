@@ -5,8 +5,9 @@ such as vehicles, IoT devices or facilities. Each entity has an identity, basic
 attributes, a status and a coordinate, and can be created, viewed, updated and
 deleted directly on a map.
 
-> **Status:** work in progress. The backend REST API is complete; the
-> frontend is being added in subsequent changes.
+> **Status:** work in progress. The backend REST API and the frontend's data
+> layer are complete; the map view and editing forms are being added in
+> subsequent changes.
 
 ## Tech stack
 
@@ -30,7 +31,12 @@ A full explanation of the library choices will be added once all layers are in p
 │       └── storage/postgres/  repository and SQL migrations
 ├── deploy/postgres/  database init scripts for docker compose
 ├── docs/API.md       REST API reference
-├── frontend/         React + TypeScript client (coming soon)
+├── frontend/         React + TypeScript client
+│   └── src/
+│       ├── app/                  app shell and query client
+│       ├── components/ui/        generic UI components
+│       ├── features/entities/    entity model, API calls, query hooks, components
+│       └── lib/                  HTTP client
 ├── docker-compose.yml
 ├── CLAUDE.md         instructions for the AI coding agent used on this project
 └── Makefile
@@ -95,3 +101,27 @@ The backend is configured through environment variables (see `backend/.env.examp
 | `LOG_LEVEL`            | `info`                  | `debug`, `info`, `warn` or `error`         |
 | `CORS_ALLOWED_ORIGINS` | `http://localhost:5173` | Comma-separated list of allowed origins    |
 | `SHUTDOWN_TIMEOUT`     | `10s`                   | Grace period for in-flight requests        |
+
+## Running the frontend
+
+Prerequisites: [Node.js 20+](https://nodejs.org/) and the backend running on
+`http://localhost:8080`.
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open `http://localhost:5173`. The Vite dev server proxies `/api` to the
+backend, so no CORS setup is needed in development. See `frontend/.env.example`
+to point it elsewhere.
+
+| Command             | Purpose                                 |
+| ------------------- | --------------------------------------- |
+| `npm run dev`       | development server with hot reload      |
+| `npm test`          | unit and component tests (Vitest)       |
+| `npm run lint`      | ESLint (type-aware)                     |
+| `npm run typecheck` | TypeScript, no emit                     |
+| `npm run build`     | type-check and production build         |
+| `npm run format`    | format with Prettier                    |

@@ -21,7 +21,18 @@ make backend-test-integration   # full suite incl. PostGIS tests, inside a Go co
 cd backend && go vet ./...
 ```
 
-Configuration is read from environment variables; see `backend/.env.example`.
+```bash
+# Frontend (run from frontend/)
+npm run dev          # Vite on :5173, proxies /api to :8080
+npm test             # Vitest
+npm run lint         # ESLint, type-aware (strictTypeChecked)
+npm run typecheck
+npm run build
+npm run format       # Prettier; run before finishing a change
+```
+
+Configuration is read from environment variables; see `backend/.env.example`
+and `frontend/.env.example`.
 
 On the developer's Windows machine, Smart App Control may block locally built
 test binaries. If `go test` fails with "An Application Control policy has blocked
@@ -67,6 +78,32 @@ Rules:
 - Wrap errors with context (`fmt.Errorf("load config: %w", err)`); log once, at the edge.
 - Use `log/slog` with structured key/value pairs. No `fmt.Println` / `log.Printf`.
 - `context.Context` is the first parameter of anything that does I/O.
+
+## Frontend architecture
+
+```
+src/app                  app shell, QueryClient setup
+src/components/ui        generic, feature-agnostic components (Button, ...)
+src/features/<feature>/  model.ts   types, zod schemas, enum labels
+                         api.ts     HTTP calls for the feature
+                         queries.ts TanStack Query keys and hooks
+                         components/
+src/lib                  cross-cutting code (HTTP client)
+src/test                 test setup and helpers (mockFetch, renderWithQueryClient)
+```
+
+Rules:
+
+- Server state lives only in TanStack Query. Components use the hooks in
+  `queries.ts`; they never call `fetch` or `api.ts` directly.
+- Every API response is parsed with a zod schema in `model.ts`. Every failure is
+  an `ApiError` (from `lib/http.ts`) with `status`, `code` and field `details`.
+- Enums in `model.ts` mirror `internal/entity/entity.go`; change both together.
+- After a write, update the detail cache and invalidate all list queries.
+- Styling is Tailwind utility classes only; `index.css` holds just the import.
+- Import across folders via the `@/` alias; relative imports within a feature.
+- Tests use Vitest + Testing Library and stub `fetch` with `mockFetch`.
+  Query by role or visible text, not by class names or test ids.
 
 ## Conventions
 
