@@ -83,14 +83,21 @@ Rules:
 
 ```
 src/app                  app shell, QueryClient setup
-src/components/ui        generic, feature-agnostic components (Button, ...)
-src/features/<feature>/  model.ts   types, zod schemas, enum labels
+src/components/ui        generic, feature-agnostic components (Button, Input, ...)
+src/features/<feature>/  model.ts   types, zod schemas, enum labels and colors
                          api.ts     HTTP calls for the feature
                          queries.ts TanStack Query keys and hooks
+                         map.ts     pure map helpers (GeoJSON, bbox, camera)
+                         filters.ts filter form state
                          components/
-src/lib                  cross-cutting code (HTTP client)
-src/test                 test setup and helpers (mockFetch, renderWithQueryClient)
+src/hooks                generic React hooks
+src/lib                  cross-cutting code (HTTP client, formatting)
+src/test                 test setup and helpers (mockFetch, routeFetch, ...)
 ```
+
+`EntityExplorer` is the main screen. It owns the filter, viewport (bbox) and
+selection state, runs the single list query, and passes the results to both
+`EntityMap` and `EntityList`.
 
 Rules:
 
@@ -102,8 +109,24 @@ Rules:
 - After a write, update the detail cache and invalidate all list queries.
 - Styling is Tailwind utility classes only; `index.css` holds just the import.
 - Import across folders via the `@/` alias; relative imports within a feature.
-- Tests use Vitest + Testing Library and stub `fetch` with `mockFetch`.
-  Query by role or visible text, not by class names or test ids.
+- Tests use Vitest + Testing Library and stub `fetch` with `mockFetch` (ordered
+  responses) or `routeFetch` (by path). Query by role or visible text, not by
+  class names or test ids.
+- Component files export only components (Fast Refresh); constants and helpers
+  go in a sibling `.ts` file.
+
+Map (MapLibre via `react-map-gl/maplibre`):
+
+- Entities are one clustered GeoJSON source with circle layers, not DOM
+  markers. Status colors come from `ENTITY_STATUS_COLORS` in `model.ts`.
+- In click handlers, query features with `map.queryRenderedFeatures(point)`.
+  Do not rely on `event.features`: react-map-gl fills it from the last
+  mousemove, so it is empty for taps and clicks without a preceding move.
+- The worker URL is set explicitly via `?worker&url` in `EntityMap.tsx`;
+  without it the map never loads after bundling.
+- `EntityMap` is lazy-loaded. jsdom has no WebGL, so component tests mock it
+  (see `EntityExplorer.test.tsx`); keep map logic in `map.ts` where it is
+  unit-testable.
 
 ## Conventions
 

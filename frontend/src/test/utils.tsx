@@ -22,14 +22,33 @@ export function mockFetch(...responses: Response[]) {
   return fetchMock
 }
 
+/**
+ * Replaces global fetch with a router, for tests that make several requests
+ * whose order is not fixed. Unmatched requests fail with a 404 envelope.
+ */
+export function routeFetch(routes: Record<string, () => Response>) {
+  const fetchMock = vi.fn<typeof fetch>((input) => {
+    const url = new URL(requestUrl(input), 'http://localhost')
+    const route = routes[url.pathname]
+    return Promise.resolve(
+      route ? route() : jsonResponse({ error: { code: 'NOT_FOUND', message: 'not found' } }, 404),
+    )
+  })
+  vi.stubGlobal('fetch', fetchMock)
+  return fetchMock
+}
+
+function requestUrl(input: RequestInfo | URL): string {
+  return typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
+}
+
 /** Returns the URL and init of the nth fetch call (0-based). */
 export function fetchCall(fetchMock: ReturnType<typeof mockFetch>, n = 0) {
   const call = fetchMock.mock.calls[n]
   if (!call)
     throw new Error(`fetch was called ${fetchMock.mock.calls.length} times, wanted call #${n}`)
   const [input, init] = call
-  const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
-  return { url, init: init ?? {} }
+  return { url: requestUrl(input), init: init ?? {} }
 }
 
 export function renderWithQueryClient(ui: ReactElement) {

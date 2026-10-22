@@ -13,6 +13,13 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
     },
+    // MapLibre's worker is an ES module.
+    worker: { format: 'es' },
+    build: {
+      // maplibre-gl alone is ~1.1 MB minified (~300 kB gzipped) and cannot be
+      // split further; it is lazy-loaded. Application chunks stay well below.
+      chunkSizeWarningLimit: 1200,
+    },
     server: {
       port: 5173,
       // Proxying /api keeps the browser on a single origin in development,

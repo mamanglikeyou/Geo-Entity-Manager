@@ -21,6 +21,15 @@ export const ENTITY_STATUS_LABELS: Record<EntityStatus, string> = {
   offline: 'Offline',
 }
 
+// Hex values (Tailwind 600 shades) because the map renders with WebGL and
+// cannot use CSS classes; StatusBadge uses the matching Tailwind classes.
+export const ENTITY_STATUS_COLORS: Record<EntityStatus, string> = {
+  active: '#059669',
+  inactive: '#64748b',
+  maintenance: '#d97706',
+  offline: '#dc2626',
+}
+
 // API responses are parsed rather than cast, so a contract mismatch with the
 // backend fails loudly at the boundary instead of deep inside a component.
 export const entitySchema = z.object({

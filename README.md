@@ -5,9 +5,9 @@ such as vehicles, IoT devices or facilities. Each entity has an identity, basic
 attributes, a status and a coordinate, and can be created, viewed, updated and
 deleted directly on a map.
 
-> **Status:** work in progress. The backend REST API and the frontend's data
-> layer are complete; the map view and editing forms are being added in
-> subsequent changes.
+> **Status:** work in progress. The REST API and the map view (clustered
+> markers, viewport-based loading, filters, detail panel) are complete; the
+> create / edit / delete forms are being added next.
 
 ## Tech stack
 
@@ -35,8 +35,9 @@ A full explanation of the library choices will be added once all layers are in p
 │   └── src/
 │       ├── app/                  app shell and query client
 │       ├── components/ui/        generic UI components
-│       ├── features/entities/    entity model, API calls, query hooks, components
-│       └── lib/                  HTTP client
+│       ├── features/entities/    entity model, API calls, query hooks, map, components
+│       ├── hooks/                generic React hooks
+│       └── lib/                  HTTP client, formatting
 ├── docker-compose.yml
 ├── CLAUDE.md         instructions for the AI coding agent used on this project
 └── Makefile
@@ -114,8 +115,12 @@ npm run dev
 ```
 
 Open `http://localhost:5173`. The Vite dev server proxies `/api` to the
-backend, so no CORS setup is needed in development. See `frontend/.env.example`
-to point it elsewhere.
+backend, so no CORS setup is needed in development.
+
+The map uses [OpenFreeMap](https://openfreemap.org) vector tiles, which need no
+API key. Only the entities inside the visible map area are loaded, and they are
+re-fetched as you pan and zoom. See `frontend/.env.example` to change the map
+style or the API location.
 
 | Command             | Purpose                                 |
 | ------------------- | --------------------------------------- |

@@ -17,10 +17,11 @@ export const entityKeys = {
   detail: (id: string) => [...entityKeys.details(), id] as const,
 }
 
-export function useEntities(filter: EntityFilter = {}) {
+export function useEntities(filter: EntityFilter = {}, { enabled = true } = {}) {
   return useQuery({
     queryKey: entityKeys.list(filter),
     queryFn: ({ signal }) => listEntities(filter, signal),
+    enabled,
     // Keep showing the previous results while a new filter or viewport
     // loads, so markers do not flicker away on every change.
     placeholderData: keepPreviousData,
@@ -28,11 +29,26 @@ export function useEntities(filter: EntityFilter = {}) {
 }
 
 export function useEntity(id: string | undefined) {
-  return useQuery({
+  const queryClient = useQueryClient()
+  // Explicit type argument: otherwise TData is inferred from placeholderData.
+  return useQuery<Entity>({
     queryKey: entityKeys.detail(id ?? ''),
     queryFn: ({ signal }) => getEntity(id ?? '', signal),
     enabled: id !== undefined,
+    // Show the copy already loaded by a list immediately, while the detail
+    // request fetches the latest version in the background.
+    placeholderData: () => findInLists(queryClient, id),
   })
+}
+
+function findInLists(queryClient: QueryClient, id: string | undefined): Entity | undefined {
+  for (const [, entities] of queryClient.getQueriesData<Entity[]>({
+    queryKey: entityKeys.lists(),
+  })) {
+    const match = entities?.find((e) => e.id === id)
+    if (match) return match
+  }
+  return undefined
 }
 
 // Lists are filtered server-side, so after any write we cannot patch them
