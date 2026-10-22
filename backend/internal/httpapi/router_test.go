@@ -18,15 +18,28 @@ type fakePinger struct{ err error }
 func (p fakePinger) Ping(context.Context) error { return p.err }
 
 func newTestRouter() http.Handler {
-	return newTestRouterWithDB(fakePinger{})
+	return testRouter(RouterConfig{})
 }
 
 func newTestRouterWithDB(db Pinger) http.Handler {
-	return NewRouter(RouterConfig{
-		Logger:         discardLogger(),
-		AllowedOrigins: []string{testOrigin},
-		DB:             db,
-	})
+	return testRouter(RouterConfig{DB: db})
+}
+
+// testRouter fills every dependency cfg leaves unset with a harmless default.
+func testRouter(cfg RouterConfig) http.Handler {
+	if cfg.Logger == nil {
+		cfg.Logger = discardLogger()
+	}
+	if cfg.AllowedOrigins == nil {
+		cfg.AllowedOrigins = []string{testOrigin}
+	}
+	if cfg.DB == nil {
+		cfg.DB = fakePinger{}
+	}
+	if cfg.Entities == nil {
+		cfg.Entities = &stubService{}
+	}
+	return NewRouter(cfg)
 }
 
 func discardLogger() *slog.Logger {

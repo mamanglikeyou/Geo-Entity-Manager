@@ -14,6 +14,7 @@ type RouterConfig struct {
 	Logger         *slog.Logger
 	AllowedOrigins []string
 	DB             Pinger
+	Entities       EntityService
 }
 
 func NewRouter(cfg RouterConfig) http.Handler {
@@ -40,6 +41,9 @@ func NewRouter(cfg RouterConfig) http.Handler {
 
 	r.Get("/healthz", handleHealth)
 	r.Get("/readyz", handleReady(cfg.DB, cfg.Logger))
+
+	entities := &entityHandler{svc: cfg.Entities, logger: cfg.Logger}
+	r.Route("/api/v1/entities", entities.routes)
 
 	return r
 }

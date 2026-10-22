@@ -57,6 +57,13 @@ Rules:
 - Every non-2xx response uses the error envelope in `internal/httpapi/respond.go`:
   `{"error": {"code": "...", "message": "...", "details": [...]}}`.
   Never write plain-text error bodies.
+- Status codes: 400 when the request cannot be parsed (`requestError`), 422 when it
+  parses but breaks a domain rule (`*entity.ValidationError`), 404 for
+  `entity.ErrNotFound`. Anything else is logged and returned as an opaque 500.
+- Handlers depend on the `httpapi.EntityService` interface and are tested with
+  `stubService`; JSON field names are camelCase.
+- `docs/API.md` is the API contract. Update it in the same change as any
+  endpoint, field or error code.
 - Wrap errors with context (`fmt.Errorf("load config: %w", err)`); log once, at the edge.
 - Use `log/slog` with structured key/value pairs. No `fmt.Println` / `log.Printf`.
 - `context.Context` is the first parameter of anything that does I/O.

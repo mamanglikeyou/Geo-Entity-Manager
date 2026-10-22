@@ -5,9 +5,8 @@ such as vehicles, IoT devices or facilities. Each entity has an identity, basic
 attributes, a status and a coordinate, and can be created, viewed, updated and
 deleted directly on a map.
 
-> **Status:** work in progress. The backend skeleton, domain layer and
-> PostGIS persistence are in place; the REST endpoints and the frontend are
-> being added in subsequent changes.
+> **Status:** work in progress. The backend REST API is complete; the
+> frontend is being added in subsequent changes.
 
 ## Tech stack
 
@@ -30,6 +29,7 @@ A full explanation of the library choices will be added once all layers are in p
 │       ├── httpapi/  router, middleware, JSON responses
 │       └── storage/postgres/  repository and SQL migrations
 ├── deploy/postgres/  database init scripts for docker compose
+├── docs/API.md       REST API reference
 ├── frontend/         React + TypeScript client (coming soon)
 ├── docker-compose.yml
 ├── CLAUDE.md         instructions for the AI coding agent used on this project
@@ -55,7 +55,11 @@ startup. The API listens on `http://localhost:8080`:
 ```bash
 curl http://localhost:8080/healthz   # liveness:  {"status":"ok"}
 curl http://localhost:8080/readyz    # readiness: {"status":"ready"} once the DB is reachable
+curl http://localhost:8080/api/v1/entities
 ```
+
+The endpoints, request rules and error format are documented in
+[docs/API.md](docs/API.md).
 
 ### Tests
 

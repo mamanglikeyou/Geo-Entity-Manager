@@ -6,10 +6,14 @@ import (
 )
 
 const (
-	codeNotFound         = "NOT_FOUND"
-	codeMethodNotAllowed = "METHOD_NOT_ALLOWED"
-	codeInternal         = "INTERNAL_ERROR"
-	codeUnavailable      = "SERVICE_UNAVAILABLE"
+	codeInvalidRequest       = "INVALID_REQUEST"
+	codeValidationFailed     = "VALIDATION_FAILED"
+	codeNotFound             = "NOT_FOUND"
+	codeMethodNotAllowed     = "METHOD_NOT_ALLOWED"
+	codePayloadTooLarge      = "PAYLOAD_TOO_LARGE"
+	codeUnsupportedMediaType = "UNSUPPORTED_MEDIA_TYPE"
+	codeInternal             = "INTERNAL_ERROR"
+	codeUnavailable          = "SERVICE_UNAVAILABLE"
 )
 
 // errorResponse is the envelope for every non-2xx response, so clients
@@ -38,5 +42,9 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 }
 
 func writeError(w http.ResponseWriter, status int, code, message string) {
-	writeJSON(w, status, errorResponse{Error: apiError{Code: code, Message: message}})
+	writeErrorDetails(w, status, code, message, nil)
+}
+
+func writeErrorDetails(w http.ResponseWriter, status int, code, message string, details []fieldError) {
+	writeJSON(w, status, errorResponse{Error: apiError{Code: code, Message: message, Details: details}})
 }

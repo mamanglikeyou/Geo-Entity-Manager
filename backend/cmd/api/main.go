@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"geo-entity-manager/backend/internal/config"
+	"geo-entity-manager/backend/internal/entity"
 	"geo-entity-manager/backend/internal/httpapi"
 	"geo-entity-manager/backend/internal/storage/postgres"
 )
@@ -56,6 +57,7 @@ func run() error {
 			Logger:         logger,
 			AllowedOrigins: cfg.AllowedOrigins,
 			DB:             pool,
+			Entities:       entity.NewService(postgres.NewEntityRepository(pool)),
 		}),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
