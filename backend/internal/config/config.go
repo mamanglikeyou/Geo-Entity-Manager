@@ -9,8 +9,13 @@ import (
 	"time"
 )
 
+// defaultDatabaseURL matches the database started by docker-compose.yml so
+// the API runs locally without extra setup. Deployments must override it.
+const defaultDatabaseURL = "postgres://geo:geo@localhost:5432/geo?sslmode=disable"
+
 type Config struct {
 	HTTPAddr        string
+	DatabaseURL     string
 	LogLevel        slog.Level
 	AllowedOrigins  []string
 	ShutdownTimeout time.Duration
@@ -32,6 +37,7 @@ func load(lookup func(string) (string, bool)) (Config, error) {
 
 	cfg := Config{
 		HTTPAddr:       get("HTTP_ADDR", ":8080"),
+		DatabaseURL:    get("DATABASE_URL", defaultDatabaseURL),
 		AllowedOrigins: splitList(get("CORS_ALLOWED_ORIGINS", "http://localhost:5173")),
 	}
 

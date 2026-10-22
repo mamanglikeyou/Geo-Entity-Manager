@@ -13,6 +13,7 @@ import (
 
 	"geo-entity-manager/backend/internal/config"
 	"geo-entity-manager/backend/internal/httpapi"
+	"geo-entity-manager/backend/internal/storage/postgres"
 )
 
 func main() {
@@ -31,20 +32,36 @@ func run() error {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: cfg.LogLevel}))
 	slog.SetDefault(logger)
 
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	startupCtx, cancelStartup := context.WithTimeout(ctx, 30*time.Second)
+	defer cancelStartup()
+
+	pool, err := postgres.Connect(startupCtx, cfg.DatabaseURL)
+	if err != nil {
+		return fmt.Errorf("connect database: %w", err)
+	}
+	defer pool.Close()
+
+	applied, err := postgres.Migrate(startupCtx, pool)
+	if err != nil {
+		return fmt.Errorf("migrate database: %w", err)
+	}
+	logger.Info("database ready", "migrations_applied", applied)
+
 	srv := &http.Server{
 		Addr: cfg.HTTPAddr,
 		Handler: httpapi.NewRouter(httpapi.RouterConfig{
 			Logger:         logger,
 			AllowedOrigins: cfg.AllowedOrigins,
+			DB:             pool,
 		}),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
 		WriteTimeout:      15 * time.Second,
 		IdleTimeout:       60 * time.Second,
 	}
-
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
 
 	serverErr := make(chan error, 1)
 	go func() {

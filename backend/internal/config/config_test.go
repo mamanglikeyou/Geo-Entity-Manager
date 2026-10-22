@@ -23,6 +23,9 @@ func TestLoadDefaults(t *testing.T) {
 	if cfg.HTTPAddr != ":8080" {
 		t.Errorf("HTTPAddr = %q, want %q", cfg.HTTPAddr, ":8080")
 	}
+	if cfg.DatabaseURL != defaultDatabaseURL {
+		t.Errorf("DatabaseURL = %q, want %q", cfg.DatabaseURL, defaultDatabaseURL)
+	}
 	if cfg.LogLevel != slog.LevelInfo {
 		t.Errorf("LogLevel = %v, want %v", cfg.LogLevel, slog.LevelInfo)
 	}
@@ -37,6 +40,7 @@ func TestLoadDefaults(t *testing.T) {
 func TestLoadOverrides(t *testing.T) {
 	cfg, err := load(envFrom(map[string]string{
 		"HTTP_ADDR":            ":9090",
+		"DATABASE_URL":         "postgres://u:p@db:5432/app",
 		"LOG_LEVEL":            "debug",
 		"CORS_ALLOWED_ORIGINS": " http://a.test, http://b.test ,",
 		"SHUTDOWN_TIMEOUT":     "3s",
@@ -47,6 +51,9 @@ func TestLoadOverrides(t *testing.T) {
 
 	if cfg.HTTPAddr != ":9090" {
 		t.Errorf("HTTPAddr = %q, want %q", cfg.HTTPAddr, ":9090")
+	}
+	if cfg.DatabaseURL != "postgres://u:p@db:5432/app" {
+		t.Errorf("DatabaseURL = %q, want override", cfg.DatabaseURL)
 	}
 	if cfg.LogLevel != slog.LevelDebug {
 		t.Errorf("LogLevel = %v, want %v", cfg.LogLevel, slog.LevelDebug)

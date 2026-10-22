@@ -13,6 +13,7 @@ import (
 type RouterConfig struct {
 	Logger         *slog.Logger
 	AllowedOrigins []string
+	DB             Pinger
 }
 
 func NewRouter(cfg RouterConfig) http.Handler {
@@ -38,6 +39,7 @@ func NewRouter(cfg RouterConfig) http.Handler {
 	})
 
 	r.Get("/healthz", handleHealth)
+	r.Get("/readyz", handleReady(cfg.DB, cfg.Logger))
 
 	return r
 }

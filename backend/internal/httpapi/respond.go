@@ -9,6 +9,7 @@ const (
 	codeNotFound         = "NOT_FOUND"
 	codeMethodNotAllowed = "METHOD_NOT_ALLOWED"
 	codeInternal         = "INTERNAL_ERROR"
+	codeUnavailable      = "SERVICE_UNAVAILABLE"
 )
 
 // errorResponse is the envelope for every non-2xx response, so clients

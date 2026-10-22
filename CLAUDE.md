@@ -14,14 +14,18 @@ and delete entities on an interactive map.
 ## Commands
 
 ```bash
-# Backend (run from backend/)
-go mod tidy          # sync dependencies
-go run ./cmd/api     # start the API on :8080
-go test ./...        # run all tests
-go vet ./...
+make db-up                      # start PostGIS (docker compose)
+make backend-run                # start the API on :8080, applies migrations
+make backend-test               # unit tests; DB tests skip without TEST_DATABASE_URL
+make backend-test-integration   # full suite incl. PostGIS tests, inside a Go container
+cd backend && go vet ./...
 ```
 
 Configuration is read from environment variables; see `backend/.env.example`.
+
+On the developer's Windows machine, Smart App Control may block locally built
+test binaries. If `go test` fails with "An Application Control policy has blocked
+this file", use `make backend-test-integration`, which runs in a Linux container.
 
 ## Backend architecture
 
@@ -30,6 +34,8 @@ cmd/api            entrypoint: config, wiring, graceful shutdown
 internal/config    environment-based configuration
 internal/entity    domain: model, validation, service, Repository interface
 internal/httpapi   router, middleware, handlers, JSON responses
+internal/storage/postgres
+                   pgx pool, embedded goose migrations, entity.Repository impl
 ```
 
 Rules:
@@ -42,6 +48,12 @@ Rules:
 - The `Repository` interface is defined by its consumer (`entity`), not by the
   storage package. Implementations return `entity.ErrNotFound` for missing rows.
 - Timestamps and IDs are assigned by `entity.Service`, not by the database.
+- Schema changes go in a new numbered file under
+  `internal/storage/postgres/migrations/`; never edit an applied migration.
+  Migrations run automatically on API startup.
+- SQL is written by hand with pgx placeholders (`$1`). Never interpolate user
+  input into SQL; escape LIKE patterns with `escapeLike`.
+- Locations are stored as `geometry(Point, 4326)`; longitude is X, latitude is Y.
 - Every non-2xx response uses the error envelope in `internal/httpapi/respond.go`:
   `{"error": {"code": "...", "message": "...", "details": [...]}}`.
   Never write plain-text error bodies.

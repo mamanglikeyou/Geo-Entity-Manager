@@ -1,7 +1,9 @@
 package httpapi
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -11,10 +13,19 @@ import (
 
 const testOrigin = "http://localhost:5173"
 
+type fakePinger struct{ err error }
+
+func (p fakePinger) Ping(context.Context) error { return p.err }
+
 func newTestRouter() http.Handler {
+	return newTestRouterWithDB(fakePinger{})
+}
+
+func newTestRouterWithDB(db Pinger) http.Handler {
 	return NewRouter(RouterConfig{
 		Logger:         discardLogger(),
 		AllowedOrigins: []string{testOrigin},
+		DB:             db,
 	})
 }
 
@@ -40,6 +51,28 @@ func TestHealth(t *testing.T) {
 	if body["status"] != "ok" {
 		t.Errorf("status field = %q, want ok", body["status"])
 	}
+}
+
+func TestReady(t *testing.T) {
+	t.Run("database reachable", func(t *testing.T) {
+		rec := httptest.NewRecorder()
+		newTestRouterWithDB(fakePinger{}).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/readyz", nil))
+
+		if rec.Code != http.StatusOK {
+			t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+		}
+	})
+
+	t.Run("database down", func(t *testing.T) {
+		rec := httptest.NewRecorder()
+		db := fakePinger{err: errors.New("connection refused")}
+		newTestRouterWithDB(db).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/readyz", nil))
+
+		if rec.Code != http.StatusServiceUnavailable {
+			t.Fatalf("status = %d, want %d", rec.Code, http.StatusServiceUnavailable)
+		}
+		assertErrorCode(t, rec, codeUnavailable)
+	})
 }
 
 func TestRoutingErrorsUseErrorEnvelope(t *testing.T) {

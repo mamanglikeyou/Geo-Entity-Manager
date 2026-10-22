@@ -5,8 +5,9 @@ such as vehicles, IoT devices or facilities. Each entity has an identity, basic
 attributes, a status and a coordinate, and can be created, viewed, updated and
 deleted directly on a map.
 
-> **Status:** work in progress. The backend skeleton and domain layer are in
-> place; persistence and the frontend are being added in subsequent changes.
+> **Status:** work in progress. The backend skeleton, domain layer and
+> PostGIS persistence are in place; the REST endpoints and the frontend are
+> being added in subsequent changes.
 
 ## Tech stack
 
@@ -26,34 +27,57 @@ A full explanation of the library choices will be added once all layers are in p
 │   └── internal/
 │       ├── config/   environment-based configuration
 │       ├── entity/   domain model, validation rules and service
-│       └── httpapi/  router, middleware, JSON responses
+│       ├── httpapi/  router, middleware, JSON responses
+│       └── storage/postgres/  repository and SQL migrations
+├── deploy/postgres/  database init scripts for docker compose
 ├── frontend/         React + TypeScript client (coming soon)
+├── docker-compose.yml
 ├── CLAUDE.md         instructions for the AI coding agent used on this project
 └── Makefile
 ```
 
 ## Running the backend
 
-Prerequisites: [Go 1.23+](https://go.dev/dl/).
+Prerequisites: [Go 1.26+](https://go.dev/dl/) and
+[Docker](https://www.docker.com/products/docker-desktop/).
+
+Start PostgreSQL + PostGIS, then the API:
 
 ```bash
+docker compose up -d --wait db
 cd backend
-go mod tidy
 go run ./cmd/api
 ```
 
-The API listens on `http://localhost:8080`. Check it with:
+Database migrations are embedded in the binary and applied automatically on
+startup. The API listens on `http://localhost:8080`:
 
 ```bash
-curl http://localhost:8080/healthz
-# {"status":"ok"}
+curl http://localhost:8080/healthz   # liveness:  {"status":"ok"}
+curl http://localhost:8080/readyz    # readiness: {"status":"ready"} once the DB is reachable
 ```
 
-Run the tests:
+### Tests
 
 ```bash
 cd backend
 go test ./...
+```
+
+Repository tests talk to a real PostGIS database and are skipped unless
+`TEST_DATABASE_URL` is set. Docker Compose creates a separate `geo_test`
+database for them. The easiest way to run the full suite is inside a Go
+container on the compose network:
+
+```bash
+make backend-test-integration
+```
+
+Without `make` (e.g. on Windows), the equivalent is:
+
+```bash
+docker compose up -d --wait db
+docker run --rm --network geo-entity-manager_default -v "$(pwd)/backend:/src" -w /src -e TEST_DATABASE_URL="postgres://geo:geo@db:5432/geo_test?sslmode=disable" golang:1.26 go test ./...
 ```
 
 ### Configuration
@@ -63,6 +87,7 @@ The backend is configured through environment variables (see `backend/.env.examp
 | Variable               | Default                 | Description                                |
 | ---------------------- | ----------------------- | ------------------------------------------ |
 | `HTTP_ADDR`            | `:8080`                 | Address the HTTP server listens on         |
+| `DATABASE_URL`         | local compose database  | PostgreSQL connection string               |
 | `LOG_LEVEL`            | `info`                  | `debug`, `info`, `warn` or `error`         |
 | `CORS_ALLOWED_ORIGINS` | `http://localhost:5173` | Comma-separated list of allowed origins    |
 | `SHUTDOWN_TIMEOUT`     | `10s`                   | Grace period for in-flight requests        |
