@@ -5,8 +5,8 @@ such as vehicles, IoT devices or facilities. Each entity has an identity, basic
 attributes, a status and a coordinate, and can be created, viewed, updated and
 deleted directly on a map.
 
-> **Status:** work in progress. The backend skeleton is in place; the domain,
-> persistence and frontend are being added in subsequent changes.
+> **Status:** work in progress. The backend skeleton and domain layer are in
+> place; persistence and the frontend are being added in subsequent changes.
 
 ## Tech stack
 
@@ -23,7 +23,10 @@ A full explanation of the library choices will be added once all layers are in p
 .
 ├── backend/          Go REST API
 │   ├── cmd/api/      application entrypoint
-│   └── internal/     config, HTTP layer (more packages to come)
+│   └── internal/
+│       ├── config/   environment-based configuration
+│       ├── entity/   domain model, validation rules and service
+│       └── httpapi/  router, middleware, JSON responses
 ├── frontend/         React + TypeScript client (coming soon)
 ├── CLAUDE.md         instructions for the AI coding agent used on this project
 └── Makefile

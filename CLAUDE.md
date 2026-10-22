@@ -28,13 +28,20 @@ Configuration is read from environment variables; see `backend/.env.example`.
 ```
 cmd/api            entrypoint: config, wiring, graceful shutdown
 internal/config    environment-based configuration
+internal/entity    domain: model, validation, service, Repository interface
 internal/httpapi   router, middleware, handlers, JSON responses
 ```
 
 Rules:
 
-- Dependencies point inward: `httpapi` -> domain service -> repository interface.
-  The domain package must not import `net/http` or any database driver.
+- Dependencies point inward: `httpapi` -> `entity.Service` -> `entity.Repository`.
+  `internal/entity` must not import `net/http` or any database driver.
+- All business validation lives in `internal/entity` and is hand-written (no
+  reflection-based validator), returning `*entity.ValidationError` with every
+  invalid field. The HTTP layer only checks that the request is well-formed JSON.
+- The `Repository` interface is defined by its consumer (`entity`), not by the
+  storage package. Implementations return `entity.ErrNotFound` for missing rows.
+- Timestamps and IDs are assigned by `entity.Service`, not by the database.
 - Every non-2xx response uses the error envelope in `internal/httpapi/respond.go`:
   `{"error": {"code": "...", "message": "...", "details": [...]}}`.
   Never write plain-text error bodies.
@@ -56,7 +63,7 @@ Work is split into phases. For each phase the agent proposes and implements the 
 the developer reviews it, runs it locally, adjusts what they disagree with, and commits.
 The agent does not commit or push on its own.
 
-1. Repository scaffold and backend skeleton  ← current
+1. Repository scaffold and backend skeleton
 2. Domain model, validation and unit tests
 3. Database, migrations and repository
 4. HTTP handlers for entity CRUD
